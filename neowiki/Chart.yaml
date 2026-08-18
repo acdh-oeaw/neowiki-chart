@@ -1,0 +1,13 @@
+apiVersion: v2
+name: neowiki
+description: NeoWiki MediaWiki + Neo4j + SPARQL backends
+type: application
+version: 0.1.0
+appVersion: "latest"
+
+dependencies:
+  # Neo4j official Helm chart (standalone)
+  - name: neo4j
+    version: 2026.7.1
+    repository: https://helm.neo4j.com/neo4j
+    condition: neo4j.enabled

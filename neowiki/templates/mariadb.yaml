@@ -1,0 +1,31 @@
+{{- if .Values.mariadb.enabled }}
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: MariaDB
+metadata:
+  name: {{ include "neowiki.mariadbName" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "neowiki.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  image: {{ .Values.mariadb.image | quote }}
+  rootPasswordSecretKeyRef:
+    name: {{ include "neowiki.mariadbSecretName" . }}
+    key: MARIADB_ROOT_PASSWORD
+  storage:
+    size: {{ .Values.mariadb.storage.size | quote }}
+    {{- if .Values.mariadb.storage.storageClassName }}
+    storageClassName: {{ .Values.mariadb.storage.storageClassName | quote }}
+    {{- end }}
+  replicas: {{ .Values.mariadb.replicas }}
+  databases:
+    - name: {{ .Values.mariadb.database | quote }}
+      characterSet: {{ .Values.mariadb.characterSet | quote }}
+      collate: {{ .Values.mariadb.collate | quote }}
+  users:
+    - name: {{ .Values.mariadb.username | quote }}
+      passwordSecretKeyRef:
+        name: {{ include "neowiki.mariadbSecretName" . }}
+        key: MARIADB_PASSWORD
+      host: "%"
+  cleanupPolicy: Delete
+{{- end }}

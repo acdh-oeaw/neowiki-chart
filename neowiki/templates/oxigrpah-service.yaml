@@ -1,0 +1,19 @@
+{{- if .Values.oxigraph.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "neowiki.oxigraph.name" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "neowiki.oxigraph.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  type: {{ .Values.oxigraph.service.type }}
+  ports:
+    - port: {{ .Values.oxigraph.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ include "neowiki.oxigraph.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

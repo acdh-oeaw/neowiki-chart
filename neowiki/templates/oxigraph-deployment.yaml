@@ -1,0 +1,59 @@
+{{- if .Values.oxigraph.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "neowiki.oxigraph.name" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "neowiki.oxigraph.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "neowiki.oxigraph.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "neowiki.oxigraph.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      terminationGracePeriodSeconds: 2
+      containers:
+        - name: oxigraph
+          image: "{{ .Values.oxigraph.image.repository }}:{{ .Values.oxigraph.image.tag }}"
+          imagePullPolicy: {{ .Values.oxigraph.image.pullPolicy }}
+          args:
+            - serve
+            - --location
+            - /data
+            - --bind
+            - 0.0.0.0:7878
+            - --union-default-graph
+          ports:
+            - containerPort: 7878
+              name: http
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+{{- toYaml .Values.oxigraph.resources | nindent 12 }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "neowiki.oxigraph.name" . }}-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "neowiki.oxigraph.name" . }}-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.oxigraph.persistence.size }}
+  {{- if .Values.oxigraph.persistence.storageClass }}
+  storageClassName: {{ .Values.oxigraph.persistence.storageClass }}
+  {{- end }}
+{{- end }}

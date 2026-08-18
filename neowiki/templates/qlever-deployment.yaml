@@ -1,0 +1,68 @@
+{{- if .Values.qlever.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "neowiki.qlever.name" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "neowiki.qlever.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "neowiki.qlever.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "neowiki.qlever.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      terminationGracePeriodSeconds: 2
+      containers:
+        - name: qlever
+          image: "{{ .Values.qlever.image.repository }}:{{ .Values.qlever.image.tag }}"
+          imagePullPolicy: {{ .Values.qlever.image.pullPolicy }}
+          env:
+            - name: QLEVER_ACCESS_TOKEN
+              value: {{ .Values.qlever.accessToken | quote }}
+          command:
+            - /bin/bash
+            - -lc
+            - |
+              set -e
+              sudo chown qlever:qlever /index || true
+              cd /index
+              if [ ! -f .neowiki-indexed ]; then
+                : > data.nt
+                qlever-index -i neowiki -F nt -f data.nt
+                touch .neowiki-indexed
+              fi
+              exec qlever-server -i neowiki -p 7019 -a "${QLEVER_ACCESS_TOKEN}" -m 1G --persist-updates --service-allowed-iri-prefixes -
+          ports:
+            - containerPort: 7019
+              name: http
+          volumeMounts:
+            - name: index
+              mountPath: /index
+          resources:
+{{- toYaml .Values.qlever.resources | nindent 12 }}
+      volumes:
+        - name: index
+          persistentVolumeClaim:
+            claimName: {{ include "neowiki.qlever.name" . }}-index
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "neowiki.qlever.name" . }}-index
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.qlever.persistence.size }}
+  {{- if .Values.qlever.persistence.storageClass }}
+  storageClassName: {{ .Values.qlever.persistence.storageClass }}
+  {{- end }}
+{{- end }}

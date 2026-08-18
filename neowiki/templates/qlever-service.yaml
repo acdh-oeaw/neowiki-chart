@@ -1,0 +1,19 @@
+{{- if .Values.qlever.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "neowiki.qlever.name" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "neowiki.qlever.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  type: {{ .Values.qlever.service.type }}
+  ports:
+    - port: {{ .Values.qlever.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ include "neowiki.qlever.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

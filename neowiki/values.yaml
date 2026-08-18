@@ -1,0 +1,107 @@
+image:
+  repository: ghcr.io/professionalwiki/neowiki
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 80
+  nodePort: null
+
+# MediaWiki settings (environment variables)
+mediawiki:
+  server: "http://neowiki.local"   # MW_SERVER
+  smtpHost: ""                     # MW_SMTP_HOST (empty = "no SMTP")
+  serverPort: 8484                 # host-facing port IF using NodePort/Ingress
+  healthcheck:
+    enabled: true
+  existingLocalSettingsConfigMap: ""  # optional: mount LocalSettings.php from ConfigMap/Secret
+
+# Database configuration
+mariadb:
+  enabled: true
+  auth:
+    rootPassword: "changeme-root"
+    database: "neowiki"
+    username: "neowiki"
+    password: "changeme"
+  architecture: standalone
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+externalDatabase:
+  enabled: false
+  host: ""
+  port: 3306
+  database: ""
+  user: ""
+  password: ""
+
+# Neo4j configuration
+neo4j:
+  enabled: true
+  # These values depend on the neo4j chart version; this is just indicative:
+  neo4j:
+    name: "neowiki-neo4j"
+    edition: "enterprise"
+    acceptLicenseAgreement: "yes"
+    password: "changeme-neo4j"
+  volumes:
+    data:
+      mode: defaultStorageClass
+      size: 8Gi
+
+externalNeo4j:
+  enabled: false
+  boltUrl: ""   # e.g. bolt://neo4j-host:7687 or http(s) endpoint depending on plugin
+  httpUrl: ""   # used for NEO4J_URL_EXTERNAL if needed
+
+# SPARQL backend (QLever)
+qlever:
+  enabled: true
+  image:
+    repository: docker.io/adfreiburg/qlever
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources: {}
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
+  accessToken: "neowiki_dev_token"
+  service:
+    type: ClusterIP
+    port: 7019
+
+# Alternative SPARQL backend (Oxigraph)
+oxigraph:
+  enabled: false
+  image:
+    repository: ghcr.io/oxigraph/oxigraph
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources: {}
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
+  service:
+    type: ClusterIP
+    port: 7878
+
+# NeoWiki <-> QLever wiring
+sparql:
+  # If non-empty, passed to mediawiki as QLEVER_URL
+  # For in-cluster QLever, this is constructed from the qlever service name
+  useQlever: true
+  useOxigraph: false
+
+# NeoWiki pod
+resources: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

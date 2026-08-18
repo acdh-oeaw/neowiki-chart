@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "neowiki.mediawiki.name" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "neowiki.mediawiki.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "neowiki.mediawiki.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "neowiki.mediawiki.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: mediawiki
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            # MariaDB env
+            - name: MARIADB_DATABASE
+              value: {{ ternary .Values.externalDatabase.database .Values.mariadb.auth.database .Values.externalDatabase.enabled | quote }}
+            - name: MARIADB_USER
+              value: {{ ternary .Values.externalDatabase.user .Values.mariadb.auth.username .Values.externalDatabase.enabled | quote }}
+            - name: MARIADB_PASSWORD
+              value: {{ ternary .Values.externalDatabase.password .Values.mariadb.auth.password .Values.externalDatabase.enabled | quote }}
+
+            # MediaWiki settings
+            - name: MW_SERVER
+              value: {{ .Values.mediawiki.server | quote }}
+            - name: MW_SMTP_HOST
+              value: {{ default "" .Values.mediawiki.smtpHost | quote }}
+
+            # Neo4j env
+            - name: NEO4J_URL_EXTERNAL
+              value: {{ include "neowiki.neo4j.urlExternal" . | quote }}
+            - name: NEO4J_USERNAME
+              value: "neo4j"
+            - name: NEO4J_PASSWORD
+              value: {{ ternary .Values.externalNeo4j.password .Values.neo4j.neo4j.password .Values.externalNeo4j.enabled | quote }}
+            # Optional read-only user if you define it externally
+            - name: NEO4J_USERNAME_READ
+              value: {{ default "" .Values.externalNeo4j.readUser | quote }}
+            - name: NEO4J_PASSWORD_READ
+              value: {{ default "" .Values.externalNeo4j.readPassword | quote }}
+
+            # QLever / SPARQL
+            - name: QLEVER_ACCESS_TOKEN
+              value: {{ .Values.qlever.accessToken | quote }}
+            {{- if and .Values.qlever.enabled .Values.sparql.useQlever }}
+            - name: QLEVER_URL
+              value: {{ include "neowiki.qlever.url" . | quote }}
+            {{- else }}
+            - name: QLEVER_URL
+              value: ""
+            {{- end }}
+
+          volumeMounts:
+            - name: images
+              mountPath: /var/www/html/w/images
+            {{- if .Values.mediawiki.existingLocalSettingsConfigMap }}
+            - name: localsettings
+              mountPath: /var/www/html/w/LocalSettings.php
+              subPath: LocalSettings.php
+              readOnly: true
+            {{- end }}
+          {{- if .Values.mediawiki.healthcheck.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /wiki/Special:Version
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /wiki/Special:Version
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 3
+          {{- end }}
+          resources:
+{{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: images
+          persistentVolumeClaim:
+            claimName: {{ include "neowiki.mediawiki.name" . }}-images
+        {{- if .Values.mediawiki.existingLocalSettingsConfigMap }}
+        - name: localsettings
+          configMap:
+            name: {{ .Values.mediawiki.existingLocalSettingsConfigMap }}
+        {{- end }}
