@@ -11,8 +11,4 @@ spec:
     name: {{ include "neowiki.mariadb.name" . }}
   characterSet: {{ default "utf8mb4" .Values.mariadb.characterSet | quote }}
   collate: {{ default "utf8mb4_unicode_ci" .Values.mariadb.collate | quote }}
-  databases:
-    - name: {{ .Values.mariadb.auth.database | quote }}
-      characterSet: {{ default "utf8mb4" .Values.mariadb.characterSet | quote }}
-      collate: {{ default "utf8mb4_unicode_ci" .Values.mariadb.collate | quote }}
 {{- end }}
