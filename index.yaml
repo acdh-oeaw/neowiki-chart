@@ -1,0 +1,19 @@
+apiVersion: v1
+entries:
+  neowiki:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-08-18T13:53:53.972171168Z"
+    dependencies:
+    - condition: neo4j.enabled
+      name: neo4j
+      repository: https://helm.neo4j.com/neo4j
+      version: 2026.7.1
+    description: NeoWiki MediaWiki + Neo4j + SPARQL backends
+    digest: c9dc3bc4841d17251efc306afff03b21dcdaa92e2515bb7d426a81cbb70bf742
+    name: neowiki
+    type: application
+    urls:
+    - https://github.com/simar0at/neowiki-chart/releases/download/neowiki-0.1.0/neowiki-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-08-18T13:53:53.972183381Z"
