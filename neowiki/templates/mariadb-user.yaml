@@ -1,0 +1,17 @@
+{{- if .Values.mariadb.enabled }}
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: User
+metadata:
+  name: {{ include "neowiki.mariadb.user.name" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "neowiki.mariadb.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  mariaDbRef:
+    name: {{ include "neowiki.mariadb.name" . }}
+  passwordSecretKeyRef:
+    name: {{ include "neowiki.mariadb.secret.name" . }}
+    key: MARIADB_PASSWORD
+  maxUserConnections: {{ default 0 .Values.mariadb.maxUserConnections }}
+  host: "%"
+{{- end }}

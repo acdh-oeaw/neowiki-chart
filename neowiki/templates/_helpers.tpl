@@ -30,6 +30,14 @@
 {{- printf "%s-mariadb-auth" (include "neowiki.fullname" .) -}}
 {{- end -}}
 
+{{- define "neowiki.mariadb.database.name" -}}
+{{- printf "%s-mariadb-database" (include "neowiki.fullname" .) -}}
+{{- end -}}
+
+{{- define "neowiki.mariadb.user.name" -}}
+{{- printf "%s-mariadb-user" (include "neowiki.fullname" .) -}}
+{{- end -}}
+
 {{- define "neowiki.neo4j.urlExternal" -}}
 {{- if .Values.externalNeo4j.enabled -}}
 {{ .Values.externalNeo4j.httpUrl }}

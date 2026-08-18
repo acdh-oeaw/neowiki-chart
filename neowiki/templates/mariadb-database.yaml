@@ -1,0 +1,18 @@
+{{- if .Values.mariadb.enabled }}
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Database
+metadata:
+  name: {{ include "neowiki.mariadb.database.name" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "neowiki.mariadb.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  mariaDbRef:
+    name: {{ include "neowiki.mariadb.name" . }}
+  characterSet: {{ default "utf8mb4" .Values.mariadb.characterSet | quote }}
+  collate: {{ default "utf8mb4_unicode_ci" .Values.mariadb.collate | quote }}
+  databases:
+    - name: {{ .Values.mariadb.auth.database | quote }}
+      characterSet: {{ default "utf8mb4" .Values.mariadb.characterSet | quote }}
+      collate: {{ default "utf8mb4_unicode_ci" .Values.mariadb.collate | quote }}
+{{- end }}

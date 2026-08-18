@@ -17,15 +17,5 @@ spec:
     storageClassName: {{ .Values.mariadb.storage.storageClassName | quote }}
     {{- end }}
   replicas: {{ .Values.mariadb.replicas }}
-  databases:
-    - name: {{ .Values.mariadb.auth.database | quote }}
-      characterSet: {{ default "utf8mb4" .Values.mariadb.characterSet | quote }}
-      collate: {{ default "utf8mb4_unicode_ci" .Values.mariadb.collate | quote }}
-  users:
-    - name: {{ .Values.mariadb.auth.username | quote }}
-      passwordSecretKeyRef:
-        name: {{ include "neowiki.mariadb.secret.name" . }}
-        key: MARIADB_PASSWORD
-      host: "%"
   cleanupPolicy: Delete
 {{- end }}
