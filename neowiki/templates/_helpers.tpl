@@ -22,11 +22,11 @@
 {{- end -}}
 {{- end -}}
 
-{{- define "neowiki.mariadbName" -}}
+{{- define "neowiki.mariadb.name" -}}
 {{- printf "%s-mariadb" (include "neowiki.fullname" .) -}}
 {{- end -}}
 
-{{- define "neowiki.mariadbSecretName" -}}
+{{- define "neowiki.mariadb.secret.name" -}}
 {{- printf "%s-mariadb-auth" (include "neowiki.fullname" .) -}}
 {{- end -}}
 

@@ -1,10 +1,20 @@
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: Service
 metadata:
-  name: {{ include "neowiki.mediawiki.name" . }}-images
+  name: {{ include "neowiki.mediawiki.name" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "neowiki.mediawiki.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+      {{- if and (eq .Values.service.type "NodePort") .Values.service.nodePort }}
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
+  selector:
+    app.kubernetes.io/name: {{ include "neowiki.mediawiki.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}

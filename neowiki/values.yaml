@@ -28,10 +28,8 @@ mariadb:
     username: "neowiki"
     password: "changeme"
   architecture: standalone
-  primary:
-    persistence:
-      enabled: true
-      size: 8Gi
+  storage:
+    size: 8Gi
 
 externalDatabase:
   enabled: false
@@ -47,8 +45,9 @@ neo4j:
   # These values depend on the neo4j chart version; this is just indicative:
   neo4j:
     name: "neowiki-neo4j"
-    edition: "enterprise"
-    acceptLicenseAgreement: "yes"
+    edition: "community"
+#    edition: "enterprise"
+#    acceptLicenseAgreement: "yes"
     password: "changeme-neo4j"
   volumes:
     data:

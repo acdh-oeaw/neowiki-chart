@@ -2,14 +2,14 @@
 apiVersion: k8s.mariadb.com/v1alpha1
 kind: MariaDB
 metadata:
-  name: {{ include "neowiki.mariadbName" . }}
+  name: {{ include "neowiki.mariadb.name" . }}
   labels:
-    app.kubernetes.io/name: {{ include "neowiki.name" . }}
+    app.kubernetes.io/name: {{ include "neowiki.mariadb.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
   image: {{ .Values.mariadb.image | quote }}
   rootPasswordSecretKeyRef:
-    name: {{ include "neowiki.mariadbSecretName" . }}
+    name: {{ include "neowiki.mariadb.secret.name" . }}
     key: MARIADB_ROOT_PASSWORD
   storage:
     size: {{ .Values.mariadb.storage.size | quote }}
@@ -18,13 +18,13 @@ spec:
     {{- end }}
   replicas: {{ .Values.mariadb.replicas }}
   databases:
-    - name: {{ .Values.mariadb.database | quote }}
-      characterSet: {{ .Values.mariadb.characterSet | quote }}
-      collate: {{ .Values.mariadb.collate | quote }}
+    - name: {{ .Values.mariadb.auth.database | quote }}
+      characterSet: {{ default "utf8mb4" .Values.mariadb.characterSet | quote }}
+      collate: {{ default "utf8mb4_unicode_ci" .Values.mariadb.collate | quote }}
   users:
-    - name: {{ .Values.mariadb.username | quote }}
+    - name: {{ .Values.mariadb.auth.username | quote }}
       passwordSecretKeyRef:
-        name: {{ include "neowiki.mariadbSecretName" . }}
+        name: {{ include "neowiki.mariadb.secret.name" . }}
         key: MARIADB_PASSWORD
       host: "%"
   cleanupPolicy: Delete
