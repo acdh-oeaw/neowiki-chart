@@ -54,6 +54,10 @@ neo4j:
     data:
       mode: defaultStorageClass
       size: 8Gi
+  services:
+    neo4j:
+      spec:
+        type: ClusterIP
 
 externalNeo4j:
   enabled: false
