@@ -26,6 +26,8 @@ spec:
               name: http
           env:
             # MariaDB env
+            - name: MARIADB_HOST
+              value: {{ ternary .Values.externalDatabase.host ( include "neowiki.mariadb.name" . ) .Values.externalDatabase.enabled | quote }}
             - name: MARIADB_DATABASE
               value: {{ ternary .Values.externalDatabase.database .Values.mariadb.auth.database .Values.externalDatabase.enabled | quote }}
             - name: MARIADB_USER
@@ -34,12 +36,16 @@ spec:
               value: {{ ternary .Values.externalDatabase.password .Values.mariadb.auth.password .Values.externalDatabase.enabled | quote }}
 
             # MediaWiki settings
+            - name: MW_TOKEN
+              value: {{ required "mediawiki.secretToken is required (64 random characters)" .Values.mediawiki.secretToken | quote }}
             - name: MW_SERVER
               value: {{ .Values.mediawiki.server | quote }}
             - name: MW_SMTP_HOST
               value: {{ default "" .Values.mediawiki.smtpHost | quote }}
 
             # Neo4j env
+            - name: NEO4J_HOST
+              value: {{ ternary .Values.externalNeo4j.host (printf "%s-neo4j-lb-neo4j:7474" (include "neowiki.fullname" .)) .Values.externalNeo4j.enabled | quote }}
             - name: NEO4J_URL_EXTERNAL
               value: {{ include "neowiki.neo4j.urlExternal" . | quote }}
             - name: NEO4J_USERNAME
@@ -66,12 +72,10 @@ spec:
           volumeMounts:
             - name: images
               mountPath: /var/www/html/w/images
-            {{- if .Values.mediawiki.existingLocalSettingsConfigMap }}
-            - name: localsettings
+            - name: config-files
               mountPath: /var/www/html/w/LocalSettings.php
               subPath: LocalSettings.php
               readOnly: true
-            {{- end }}
           {{- if .Values.mediawiki.healthcheck.enabled }}
           readinessProbe:
             httpGet:
@@ -96,11 +100,9 @@ spec:
         - name: images
           persistentVolumeClaim:
             claimName: {{ include "neowiki.mediawiki.name" . }}-images
-        {{- if .Values.mediawiki.existingLocalSettingsConfigMap }}
-        - name: localsettings
+        - name: config-files
           configMap:
-            name: {{ .Values.mediawiki.existingLocalSettingsConfigMap }}
-        {{- end }}
+            name: {{ include "neowiki.mediawiki.name" . }}-config-files
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

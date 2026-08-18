@@ -42,7 +42,7 @@
 {{- if .Values.externalNeo4j.enabled -}}
 {{ .Values.externalNeo4j.httpUrl }}
 {{- else -}}
-{{ printf "http://%s-neo4j:7474" (include "neowiki.fullname" .) }}
+{{ printf "http://%s-neo4j-lb-neo4j:7474" (include "neowiki.fullname" .) }}
 {{- end -}}
 {{- end -}}
 
