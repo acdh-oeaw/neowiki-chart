@@ -29,9 +29,9 @@ spec:
             - name: MARIADB_HOST
               value: {{ ternary .Values.externalDatabase.host ( include "neowiki.mariadb.name" . ) .Values.externalDatabase.enabled | quote }}
             - name: MARIADB_DATABASE
-              value: {{ ternary .Values.externalDatabase.database .Values.mariadb.auth.database .Values.externalDatabase.enabled | quote }}
+              value: {{ ternary .Values.externalDatabase.database ( include "neowiki.mariadb.database.name" . ) .Values.externalDatabase.enabled | quote }}
             - name: MARIADB_USER
-              value: {{ ternary .Values.externalDatabase.user .Values.mariadb.auth.username .Values.externalDatabase.enabled | quote }}
+              value: {{ ternary .Values.externalDatabase.user ( include "neowiki.mariadb.user.name" . ) .Values.externalDatabase.enabled | quote }}
             - name: MARIADB_PASSWORD
               value: {{ ternary .Values.externalDatabase.password .Values.mariadb.auth.password .Values.externalDatabase.enabled | quote }}
 

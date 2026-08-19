@@ -25,8 +25,6 @@ mariadb:
   enabled: true
   auth:
     rootPassword: "changeme-root"
-    database: "neowiki"
-    username: "neowiki"
     password: "changeme"
   architecture: standalone
   storage:
