@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "neowiki.mediawiki.name" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "neowiki.mediawiki.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  rules:
+    - host: {{ .Values.mediawiki.server }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: {{ include "neowiki.mediawiki.name" . }}
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+  {{- if .Values.mediawiki.tls.enabled }}
+  tls:
+  - hosts:
+      - {{ .Values.mediawiki.server }}
+    secretName: {{ include "neowiki.mediawiki.name" . }}-tls
+  {{- end }}

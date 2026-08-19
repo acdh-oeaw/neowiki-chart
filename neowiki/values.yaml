@@ -12,12 +12,14 @@ service:
 
 # MediaWiki settings (environment variables)
 mediawiki:
-  server: "http://neowiki.local"   # MW_SERVER
+  server: "neowiki.local"   # MW_SERVER
   smtpHost: ""                     # MW_SMTP_HOST (empty = "no SMTP")
   serverPort: 8484                 # host-facing port IF using NodePort/Ingress
   healthcheck:
     enabled: true
   existingLocalSettingsConfigMap: ""  # optional: mount LocalSettings.php from ConfigMap/Secret
+  tls:
+    enabled: false
 
 # Database configuration
 mariadb:

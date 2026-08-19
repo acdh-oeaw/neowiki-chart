@@ -79,7 +79,7 @@ spec:
             - name: MW_TOKEN
               value: {{ include "neowiki.mediawiki.validateSecretToken" . | required "mediawiki.secretToken is required (64 random characters)" | quote }}
             - name: MW_SERVER
-              value: {{ .Values.mediawiki.server | quote }}
+              value: {{ ternary "https" "http" .Values.mediawiki.tls.enabled }}://{{ .Values.mediawiki.server }}
             - name: MW_SMTP_HOST
               value: {{ default "" .Values.mediawiki.smtpHost | quote }}
 
