@@ -21,13 +21,12 @@ spec:
         - args:
               # See the Makefile in the neowiki repository install-db, assumed it is idempotent
             - >-
-              rm LocalSettings.php
-              php maintenance/run.php install --dbuser $MARIADB_USER --dbpass
-              $MARIADB_PASSWORD \
+              rm LocalSettings.php &&\
+              php maintenance/run.php install --dbuser $MARIADB_USER --dbpass $MARIADB_PASSWORD \
                 --dbname $MARIADB_DATABASE --dbserver $MARIADB_HOST:3306 --lang en \
                 --pass $MW_ADMIN_PASSWORD \
                 --server $MW_SERVER \
-                SiteName AdminName
+                SiteName AdminName &&\
               php maintenance/run.php update --quick
           command:
             - /bin/sh
