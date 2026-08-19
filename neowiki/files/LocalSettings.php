@@ -225,8 +225,8 @@ wfLoadExtension( 'RedHerb', "$IP/extensions/NeoWiki/tests/RedHerb/extension.json
 
 $wgNeoWikiEnableDevelopmentUI = true;
 
-$wgNeoWikiNeo4jInternalWriteUrl = 'bolt://' . getenv( 'NEO4J_USERNAME' ) . ':' . getenv( 'NEO4J_PASSWORD' ) . '@' . getenv( 'NEO4J_HOST' )':7687';
-$wgNeoWikiNeo4jInternalReadUrl = 'bolt://' . getenv( 'NEO4J_USERNAME_READ' ) . ':' . getenv( 'NEO4J_PASSWORD_READ' ) . '@' . getenv( 'NEO4J_HOST' )':7687';
+$wgNeoWikiNeo4jInternalWriteUrl = 'bolt://' . getenv( 'NEO4J_USERNAME' ) . ':' . getenv( 'NEO4J_PASSWORD' ) . '@' . getenv( 'NEO4J_HOST' ) . ':7687';
+$wgNeoWikiNeo4jInternalReadUrl = 'bolt://' . getenv( 'NEO4J_USERNAME_READ' ) . ':' . getenv( 'NEO4J_PASSWORD_READ' ) . '@' . getenv( 'NEO4J_HOST' ) . ':7687';
 
 // SPARQL graph store (QLever) for the SPARQL projection plugin (#586). Both the demo stack and the
 // dev stack run the qlever service defined in docker-compose.yml by default and point the wiki at
