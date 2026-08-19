@@ -6,6 +6,20 @@
 {{ include "neowiki.fullname" . }}-mediawiki
 {{- end -}}
 
+{{- define "neowiki.mediawiki.validateSecretToken" -}}
+{{- $v := .Values.mediawiki.secretToken -}}
+{{- if and $v (ge (len $v) 64) -}}
+{{- $v -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "neowiki.mediawiki.validateAdminPassword" -}}
+{{- $v := .Values.mediawiki.adminPassword -}}
+{{- if and $v (ge (len $v) 10) -}}
+{{- $v -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "neowiki.qlever.name" -}}
 {{ include "neowiki.fullname" . }}-qlever
 {{- end -}}
