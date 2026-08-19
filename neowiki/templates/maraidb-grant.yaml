@@ -1,0 +1,21 @@
+{{- if .Values.mariadb.enabled }}
+apiVersion: k8s.mariadb.com/v1alpha1
+kind: Grant
+metadata:
+  name: {{ include "neowiki.mariadb.user.name" . }}-to-{{ include "neowiki.mariadb.database.name" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "neowiki.mariadb.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  database: {{ include "neowiki.mariadb.database.name" . }}
+  grantOption: true
+  host: '%'
+  mariaDbRef:
+    name: {{ include "neowiki.mariadb.name" . }}
+  privileges:
+    - ALL PRIVILEGES
+  requeueInterval: 30s
+  retryInterval: 5s
+  table: '*'
+  username: {{ include "neowiki.mariadb.user.name" . }}
+{{- end }}
