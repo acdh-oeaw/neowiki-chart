@@ -18,4 +18,6 @@ spec:
     {{- end }}
   replicas: {{ .Values.mariadb.replicas }}
   cleanupPolicy: Delete
+  tls:
+{{ toYaml .Values.mariadb.tls | indent 4 }}
 {{- end }}

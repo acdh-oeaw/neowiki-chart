@@ -31,6 +31,10 @@ mariadb:
   architecture: standalone
   storage:
     size: 8Gi
+  tls:
+    enabled: false
+    galeraSSTEnabled: false
+    required: false
 
 externalDatabase:
   enabled: false
