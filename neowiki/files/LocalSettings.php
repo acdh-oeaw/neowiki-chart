@@ -63,8 +63,8 @@ $wgFavicon = "$wgScriptPath/images/favicon.ico";
 $wgEnableEmail = true;
 $wgEnableUserEmail = true; # UPO
 
-$wgEmergencyContact = getenv( 'MW_MAIL' );
-$wgPasswordSender = getenv( 'MW_MAIL' );
+$wgEmergencyContact = getenv( 'MW_MAIL' ) ?: 'apache@localhost';
+$wgPasswordSender = getenv( 'MW_MAIL' ) ?: 'apache@localhost';
 
 $wgEnotifUserTalk = false; # UPO
 $wgEnotifWatchlist = false; # UPO
@@ -149,7 +149,7 @@ $wgCacheDirectory = "$IP/cache";
 # Site language code, should be one of the list in ./languages/data/Names.php
 $wgLanguageCode = "en";
 
-$wgSecretKey = getenv( 'MW_TOKEN' );;
+$wgSecretKey = getenv( 'MW_TOKEN' );
 
 # Changing this will log out all existing sessions.
 $wgAuthenticationTokenVersion = "1";
