@@ -1,3 +1,4 @@
+{{- if .Values.mediawiki.ingress.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -23,3 +24,4 @@ spec:
       - {{ .Values.mediawiki.server }}
     secretName: {{ include "neowiki.mediawiki.name" . }}-tls
   {{- end }}
+{{- end }}

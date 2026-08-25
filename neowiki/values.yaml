@@ -15,6 +15,8 @@ mediawiki:
   server: "neowiki.local"   # MW_SERVER
   smtpHost: ""                     # MW_SMTP_HOST (empty = "no SMTP")
   serverPort: 8484                 # host-facing port IF using NodePort/Ingress
+  ingress:
+    enabled: true
   healthcheck:
     enabled: true
   existingLocalSettingsConfigMap: ""  # optional: mount LocalSettings.php from ConfigMap/Secret
@@ -25,6 +27,7 @@ mediawiki:
 mariadb:
   image: docker-registry1.mariadb.com/library/mariadb:11.8
   enabled: true
+  replicas: 1
   auth:
     rootPassword: "changeme-root"
     password: "changeme"
@@ -54,10 +57,15 @@ neo4j:
 #    edition: "enterprise"
 #    acceptLicenseAgreement: "yes"
     password: "changeme-neo4j"
+    readUser: "mediawiki_read"
+    readPassword: "mediawiki_read"
   volumes:
     data:
       mode: defaultStorageClass
-      size: 8Gi
+      defaultStorageClass:
+        accessModes: [ReadWriteOnce]
+        requests:
+          storage: 8Gi
   services:
     neo4j:
       spec:
@@ -65,8 +73,16 @@ neo4j:
 
 externalNeo4j:
   enabled: false
+  host: ""
   boltUrl: ""   # e.g. bolt://neo4j-host:7687 or http(s) endpoint depending on plugin
   httpUrl: ""   # used for NEO4J_URL_EXTERNAL if needed
+  readUser: ""
+  readPassword: ""
+
+# NeoWiki demo data
+# Seeds demo pages and queries on first run. Disable for a production/clean wiki.
+demoData:
+  enabled: true
 
 # SPARQL backend (QLever)
 qlever:
