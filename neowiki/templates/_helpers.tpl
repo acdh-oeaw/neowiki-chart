@@ -60,14 +60,18 @@
 {{- end -}}
 {{- end -}}
 
+{{- define "neowiki.neo4j.readAuthSecret.name" -}}
+{{- printf "%s-read-auth" .Values.neo4j.neo4j.name -}}
+{{- end -}}
+
 {{- define "neowiki.qlever.url" -}}
-{{ printf "http://%s:%d" (include "neowiki.qlever.name" .) .Values.qlever.service.port }}
+{{ printf "http://%s:%d" (include "neowiki.qlever.name" .) (int .Values.qlever.service.port) }}
 {{- end -}}
 
 {{- define "neowiki.oxigraph.updateUrl" -}}
-{{ printf "http://%s:%d/update" (include "neowiki.oxigraph.name" .) .Values.oxigraph.service.port }}
+{{ printf "http://%s:%d/update" (include "neowiki.oxigraph.name" .) (int .Values.oxigraph.service.port) }}
 {{- end -}}
 
 {{- define "neowiki.oxigraph.queryUrl" -}}
-{{ printf "http://%s:%d/query" (include "neowiki.oxigraph.name" .) .Values.oxigraph.service.port }}
+{{ printf "http://%s:%d/query" (include "neowiki.oxigraph.name" .) (int .Values.oxigraph.service.port) }}
 {{- end -}}

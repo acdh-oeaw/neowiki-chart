@@ -18,23 +18,52 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       initContainers:
-        - args:
-              # See the Makefile in the neowiki repository install-db, assumed it is idempotent
-            - >-
-              rm LocalSettings.php &&
-              php maintenance/run.php install --dbuser $MARIADB_USER --dbpass $MARIADB_PASSWORD \
-                --dbname $MARIADB_DATABASE --dbserver $MARIADB_HOST:3306 --lang en \
-                --pass $MW_ADMIN_PASSWORD \
-                --server $MW_SERVER \
-                SiteName AdminName &&
-              php maintenance/run.php update --quick
+        - name: initial-setup
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
-            - /bin/sh
-            - '-c'
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              until php -r '
+              mysqli_report(MYSQLI_REPORT_OFF);
+              try {
+                $m = @new mysqli(getenv("MARIADB_HOST"), getenv("MARIADB_USER"), getenv("MARIADB_PASSWORD"), getenv("MARIADB_DATABASE"), (int)(getenv("MARIADB_PORT") ?: 3306));
+                if ($m->connect_errno) { exit(1); }
+                $res = @$m->query("SELECT 1 FROM page LIMIT 1");
+                if ($res && $res->num_rows > 0) { exit(0); }
+                exit(2);
+              } catch (Throwable $e) {
+                exit(1);
+              }
+              '; status=$?; [ $status -eq 0 ] || [ $status -eq 2 ]; do
+                echo "Waiting for database connection..."
+                sleep 2
+              done
+
+              if [ $status -eq 2 ]; then
+                echo "Database not initialized. Installing MediaWiki..."
+                rm -f LocalSettings.php
+                php maintenance/run.php install \
+                  --dbuser "$MARIADB_USER" \
+                  --dbpass "$MARIADB_PASSWORD" \
+                  --dbname "$MARIADB_DATABASE" \
+                  --dbserver "$MARIADB_HOST:$MARIADB_PORT" \
+                  --lang en \
+                  --pass "$MW_ADMIN_PASSWORD" \
+                  --server "$MW_SERVER" \
+                  SiteName AdminName
+              fi
+
+              echo "Running database updates..."
+              php maintenance/run.php update --quick
           env:
             # MariaDB env
             - name: MARIADB_HOST
               value: {{ ternary .Values.externalDatabase.host ( include "neowiki.mariadb.name" . ) .Values.externalDatabase.enabled | quote }}
+            - name: MARIADB_PORT
+              value: {{ ternary (toString .Values.externalDatabase.port) "3306" .Values.externalDatabase.enabled | quote }}
             - name: MARIADB_DATABASE
               value: {{ ternary .Values.externalDatabase.database ( include "neowiki.mariadb.database.name" . ) .Values.externalDatabase.enabled | quote }}
             - name: MARIADB_USER
@@ -43,16 +72,13 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: MARIADB_PASSWORD
-                  name: neowiki-mariadb-auth
+                  name: {{ include "neowiki.mariadb.secret.name" . }}
                   optional: false
             # MediaWiki settings
             - name: MW_ADMIN_PASSWORD
               value: {{ include "neowiki.mediawiki.validateAdminPassword" . | required "mediawiki.adminPassword is required (10 characters)" | quote }}
             - name: MW_SERVER
-              value: {{ .Values.mediawiki.server | quote }}
-          image: ghcr.io/professionalwiki/neowiki:latest
-          imagePullPolicy: IfNotPresent
-          name: initial-setup
+              value: {{ ternary "https" "http" .Values.mediawiki.tls.enabled }}://{{ .Values.mediawiki.server }}
       containers:
         - name: mediawiki
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -64,6 +90,8 @@ spec:
             # MariaDB env
             - name: MARIADB_HOST
               value: {{ ternary .Values.externalDatabase.host ( include "neowiki.mariadb.name" . ) .Values.externalDatabase.enabled | quote }}
+            - name: MARIADB_PORT
+              value: {{ ternary (toString .Values.externalDatabase.port) "3306" .Values.externalDatabase.enabled | quote }}
             - name: MARIADB_DATABASE
               value: {{ ternary .Values.externalDatabase.database ( include "neowiki.mariadb.database.name" . ) .Values.externalDatabase.enabled | quote }}
             - name: MARIADB_USER
@@ -72,7 +100,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: MARIADB_PASSWORD
-                  name: neowiki-mariadb-auth
+                  name: {{ include "neowiki.mariadb.secret.name" . }}
                   optional: false
 
             # MediaWiki settings
@@ -84,19 +112,42 @@ spec:
               value: {{ default "" .Values.mediawiki.smtpHost | quote }}
 
             # Neo4j env
+            - name: NEO4J_SCHEME
+              value: "bolt"
             - name: NEO4J_HOST
-              value: {{ ternary .Values.externalNeo4j.host (printf "%s-neo4j-lb-neo4j:7474" (include "neowiki.fullname" .)) .Values.externalNeo4j.enabled | quote }}
+              value: {{ ternary .Values.externalNeo4j.host (printf "%s-neo4j-lb-neo4j" (include "neowiki.fullname" .)) .Values.externalNeo4j.enabled | quote }}
+            - name: NEO4J_PORT
+              value: "7687"
             - name: NEO4J_URL_EXTERNAL
               value: {{ include "neowiki.neo4j.urlExternal" . | quote }}
             - name: NEO4J_USERNAME
               value: "neo4j"
             - name: NEO4J_PASSWORD
               value: {{ ternary .Values.externalNeo4j.password .Values.neo4j.neo4j.password .Values.externalNeo4j.enabled | quote }}
-            # Optional read-only user if you define it externally
+            {{- if .Values.externalNeo4j.enabled }}
             - name: NEO4J_USERNAME_READ
               value: {{ default "" .Values.externalNeo4j.readUser | quote }}
             - name: NEO4J_PASSWORD_READ
               value: {{ default "" .Values.externalNeo4j.readPassword | quote }}
+            {{- else if .Values.neo4j.enabled }}
+            - name: NEO4J_USERNAME_READ
+              valueFrom:
+                secretKeyRef:
+                  key: NEO4J_USERNAME_READ
+                  name: {{ include "neowiki.neo4j.readAuthSecret.name" . }}
+                  optional: false
+            - name: NEO4J_PASSWORD_READ
+              valueFrom:
+                secretKeyRef:
+                  key: NEO4J_PASSWORD_READ
+                  name: {{ include "neowiki.neo4j.readAuthSecret.name" . }}
+                  optional: false
+            {{- else }}
+            - name: NEO4J_USERNAME_READ
+              value: ""
+            - name: NEO4J_PASSWORD_READ
+              value: ""
+            {{- end }}
 
             # QLever / SPARQL
             - name: QLEVER_ACCESS_TOKEN
