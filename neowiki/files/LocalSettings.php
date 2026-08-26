@@ -33,7 +33,7 @@ if ( $mwIsDev ) {
 ## Uncomment this to disable output compression
 # $wgDisableOutputCompression = true;
 
-$wgSitename = "NeoWiki Demo";
+$wgSitename = getenv( 'MW_SITE_NAME' ) ?: "NeoWiki Demo";
 
 ## The URL base path to the directory containing the wiki;
 ## defaults for all runtime URL paths are based off of this.

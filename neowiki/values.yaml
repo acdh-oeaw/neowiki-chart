@@ -13,6 +13,8 @@ service:
 # MediaWiki settings (environment variables)
 mediawiki:
   server: "neowiki.local"   # MW_SERVER
+  siteName: "NeoWiki Demo"         # MW_SITE_NAME
+  adminUser: "AdminName"           # MW_ADMIN_NAME
   smtpHost: ""                     # MW_SMTP_HOST (empty = "no SMTP")
   serverPort: 8484                 # host-facing port IF using NodePort/Ingress
   ingress:

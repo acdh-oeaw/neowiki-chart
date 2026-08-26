@@ -53,7 +53,7 @@ spec:
                   --lang en \
                   --pass "$MW_ADMIN_PASSWORD" \
                   --server "$MW_SERVER" \
-                  SiteName AdminName
+                  "$MW_SITE_NAME" "$MW_ADMIN_NAME"
               fi
 
               echo "Running database updates..."
@@ -80,6 +80,10 @@ spec:
                   name: {{ include "neowiki.mariadb.secret.name" . }}
                   optional: false
             # MediaWiki settings
+            - name: MW_SITE_NAME
+              value: {{ default "NeoWiki Demo" .Values.mediawiki.siteName | quote }}
+            - name: MW_ADMIN_NAME
+              value: {{ default "AdminName" .Values.mediawiki.adminUser | quote }}
             - name: MW_ADMIN_PASSWORD
               value: {{ include "neowiki.mediawiki.validateAdminPassword" . | required "mediawiki.adminPassword is required (10 characters)" | quote }}
             - name: MW_TOKEN
@@ -162,6 +166,8 @@ spec:
                   optional: false
 
             # MediaWiki settings
+            - name: MW_SITE_NAME
+              value: {{ default "NeoWiki Demo" .Values.mediawiki.siteName | quote }}
             - name: MW_TOKEN
               value: {{ include "neowiki.mediawiki.validateSecretToken" . | required "mediawiki.secretToken is required (64 random characters)" | quote }}
             - name: MW_SERVER
