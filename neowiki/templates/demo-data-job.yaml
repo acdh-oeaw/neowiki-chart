@@ -1,0 +1,159 @@
+{{- if .Values.demoData.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "neowiki.fullname" . }}-demo-data
+  labels:
+    app.kubernetes.io/name: {{ include "neowiki.fullname" . }}-demo-data
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  backoffLimit: 5
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "neowiki.fullname" . }}-demo-data
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: import-demo-data
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          workingDir: /var/www/html/w
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+
+              echo "Waiting for MariaDB and MediaWiki installation..."
+              until php -r '
+              mysqli_report(MYSQLI_REPORT_OFF);
+              try {
+                $m = @new mysqli(getenv("MARIADB_HOST"), getenv("MARIADB_USER"), getenv("MARIADB_PASSWORD"), getenv("MARIADB_DATABASE"), (int)(getenv("MARIADB_PORT") ?: 3306));
+                if ($m->connect_errno) { exit(1); }
+                $res = @$m->query("SELECT 1 FROM page LIMIT 1");
+                if ($res && $res->num_rows > 0) { exit(0); }
+                exit(1);
+              } catch (Throwable $e) {
+                exit(1);
+              }
+              '; do
+                sleep 2
+              done
+              echo "MediaWiki database is ready."
+
+              {{- if and .Values.qlever.enabled .Values.sparql.useQlever }}
+              if [ -n "$QLEVER_URL" ]; then
+                echo "Waiting for QLever SPARQL endpoint..."
+                until curl -fsS -o /dev/null "$QLEVER_URL/?query=SELECT%20%2A%20WHERE%20%7B%20%3Fs%20%3Fp%20%3Fo%20%7D%20LIMIT%201"; do
+                  sleep 2
+                done
+                echo "QLever is ready."
+              fi
+              {{- end }}
+
+              {{- if or .Values.neo4j.enabled .Values.externalNeo4j.enabled }}
+              if [ -n "$NEO4J_HOST" ]; then
+                echo "Waiting for Neo4j bolt endpoint..."
+                until php -r '
+                $host = getenv("NEO4J_HOST");
+                $port = (int)(getenv("NEO4J_PORT") ?: 7687);
+                $fp = @fsockopen($host, $port, $errno, $errstr, 2);
+                if ($fp) { fclose($fp); exit(0); }
+                exit(1);
+                '; do
+                  sleep 2
+                done
+                echo "Neo4j is ready."
+              fi
+              {{- end }}
+
+              echo "Importing NeoWiki demo data..."
+              php maintenance/run.php NeoWiki:ImportDemoData
+              echo "Demo data import finished."
+          env:
+            # MariaDB env
+            - name: MARIADB_HOST
+              value: {{ ternary .Values.externalDatabase.host ( include "neowiki.mariadb.name" . ) .Values.externalDatabase.enabled | quote }}
+            - name: MARIADB_PORT
+              value: {{ ternary (toString .Values.externalDatabase.port) "3306" .Values.externalDatabase.enabled | quote }}
+            - name: MARIADB_DATABASE
+              value: {{ ternary .Values.externalDatabase.database ( include "neowiki.mariadb.database.name" . ) .Values.externalDatabase.enabled | quote }}
+            - name: MARIADB_USER
+              value: {{ ternary .Values.externalDatabase.user ( include "neowiki.mariadb.user.name" . ) .Values.externalDatabase.enabled | quote }}
+            - name: MARIADB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MARIADB_PASSWORD
+                  name: {{ include "neowiki.mariadb.secret.name" . }}
+                  optional: false
+
+            # MediaWiki settings
+            - name: MW_TOKEN
+              value: {{ include "neowiki.mediawiki.validateSecretToken" . | required "mediawiki.secretToken is required (64 random characters)" | quote }}
+            - name: MW_SERVER
+              value: {{ ternary "https" "http" .Values.mediawiki.tls.enabled }}://{{ .Values.mediawiki.server }}
+            - name: MW_SMTP_HOST
+              value: {{ default "" .Values.mediawiki.smtpHost | quote }}
+
+            # Neo4j env
+            - name: NEO4J_SCHEME
+              value: "bolt"
+            - name: NEO4J_HOST
+              value: {{ ternary .Values.externalNeo4j.host (printf "%s-neo4j-lb-neo4j" (include "neowiki.fullname" .)) .Values.externalNeo4j.enabled | quote }}
+            - name: NEO4J_PORT
+              value: "7687"
+            - name: NEO4J_URL_EXTERNAL
+              value: {{ include "neowiki.neo4j.urlExternal" . | quote }}
+            - name: NEO4J_USERNAME
+              value: "neo4j"
+            - name: NEO4J_PASSWORD
+              value: {{ ternary .Values.externalNeo4j.password .Values.neo4j.neo4j.password .Values.externalNeo4j.enabled | quote }}
+            {{- if .Values.externalNeo4j.enabled }}
+            - name: NEO4J_USERNAME_READ
+              value: {{ default "" .Values.externalNeo4j.readUser | quote }}
+            - name: NEO4J_PASSWORD_READ
+              value: {{ default "" .Values.externalNeo4j.readPassword | quote }}
+            {{- else if .Values.neo4j.enabled }}
+            - name: NEO4J_USERNAME_READ
+              valueFrom:
+                secretKeyRef:
+                  key: NEO4J_USERNAME_READ
+                  name: {{ include "neowiki.neo4j.readAuthSecret.name" . }}
+                  optional: false
+            - name: NEO4J_PASSWORD_READ
+              valueFrom:
+                secretKeyRef:
+                  key: NEO4J_PASSWORD_READ
+                  name: {{ include "neowiki.neo4j.readAuthSecret.name" . }}
+                  optional: false
+            {{- else }}
+            - name: NEO4J_USERNAME_READ
+              value: ""
+            - name: NEO4J_PASSWORD_READ
+              value: ""
+            {{- end }}
+
+            # QLever / SPARQL
+            - name: QLEVER_ACCESS_TOKEN
+              value: {{ .Values.qlever.accessToken | quote }}
+            {{- if and .Values.qlever.enabled .Values.sparql.useQlever }}
+            - name: QLEVER_URL
+              value: {{ include "neowiki.qlever.url" . | quote }}
+            {{- else }}
+            - name: QLEVER_URL
+              value: ""
+            {{- end }}
+
+          volumeMounts:
+            - name: config-files
+              mountPath: /var/www/html/w/LocalSettings.php
+              subPath: LocalSettings.php
+              readOnly: true
+      volumes:
+        - name: config-files
+          configMap:
+            name: {{ include "neowiki.mediawiki.name" . }}-config-files
+{{- end }}
