@@ -70,6 +70,9 @@ spec:
               fi
               {{- end }}
 
+              echo "Ensuring database schema is up to date..."
+              php maintenance/run.php update --quick
+
               echo "Importing NeoWiki demo data..."
               php maintenance/run.php NeoWiki:ImportDemoData
               echo "Demo data import finished."

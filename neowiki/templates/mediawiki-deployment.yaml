@@ -44,8 +44,8 @@ spec:
 
               if [ $status -eq 2 ]; then
                 echo "Database not initialized. Installing MediaWiki..."
-                rm -f LocalSettings.php
                 php maintenance/run.php install \
+                  --confpath /tmp \
                   --dbuser "$MARIADB_USER" \
                   --dbpass "$MARIADB_PASSWORD" \
                   --dbname "$MARIADB_DATABASE" \
@@ -58,6 +58,11 @@ spec:
 
               echo "Running database updates..."
               php maintenance/run.php update --quick
+          volumeMounts:
+            - name: config-files
+              mountPath: /var/www/html/w/LocalSettings.php
+              subPath: LocalSettings.php
+              readOnly: true
           env:
             # MariaDB env
             - name: MARIADB_HOST
@@ -77,8 +82,61 @@ spec:
             # MediaWiki settings
             - name: MW_ADMIN_PASSWORD
               value: {{ include "neowiki.mediawiki.validateAdminPassword" . | required "mediawiki.adminPassword is required (10 characters)" | quote }}
+            - name: MW_TOKEN
+              value: {{ include "neowiki.mediawiki.validateSecretToken" . | required "mediawiki.secretToken is required (64 random characters)" | quote }}
             - name: MW_SERVER
               value: {{ ternary "https" "http" .Values.mediawiki.tls.enabled }}://{{ .Values.mediawiki.server }}
+            - name: MW_SMTP_HOST
+              value: {{ default "" .Values.mediawiki.smtpHost | quote }}
+
+            # Neo4j env
+            - name: NEO4J_SCHEME
+              value: "bolt"
+            - name: NEO4J_HOST
+              value: {{ ternary .Values.externalNeo4j.host (printf "%s-neo4j-lb-neo4j" (include "neowiki.fullname" .)) .Values.externalNeo4j.enabled | quote }}
+            - name: NEO4J_PORT
+              value: "7687"
+            - name: NEO4J_URL_EXTERNAL
+              value: {{ include "neowiki.neo4j.urlExternal" . | quote }}
+            - name: NEO4J_USERNAME
+              value: "neo4j"
+            - name: NEO4J_PASSWORD
+              value: {{ ternary .Values.externalNeo4j.password .Values.neo4j.neo4j.password .Values.externalNeo4j.enabled | quote }}
+            {{- if .Values.externalNeo4j.enabled }}
+            - name: NEO4J_USERNAME_READ
+              value: {{ default "" .Values.externalNeo4j.readUser | quote }}
+            - name: NEO4J_PASSWORD_READ
+              value: {{ default "" .Values.externalNeo4j.readPassword | quote }}
+            {{- else if .Values.neo4j.enabled }}
+            - name: NEO4J_USERNAME_READ
+              valueFrom:
+                secretKeyRef:
+                  key: NEO4J_USERNAME_READ
+                  name: {{ include "neowiki.neo4j.readAuthSecret.name" . }}
+                  optional: false
+            - name: NEO4J_PASSWORD_READ
+              valueFrom:
+                secretKeyRef:
+                  key: NEO4J_PASSWORD_READ
+                  name: {{ include "neowiki.neo4j.readAuthSecret.name" . }}
+                  optional: false
+            {{- else }}
+            - name: NEO4J_USERNAME_READ
+              value: ""
+            - name: NEO4J_PASSWORD_READ
+              value: ""
+            {{- end }}
+
+            # QLever / SPARQL
+            - name: QLEVER_ACCESS_TOKEN
+              value: {{ .Values.qlever.accessToken | quote }}
+            {{- if and .Values.qlever.enabled .Values.sparql.useQlever }}
+            - name: QLEVER_URL
+              value: {{ include "neowiki.qlever.url" . | quote }}
+            {{- else }}
+            - name: QLEVER_URL
+              value: ""
+            {{- end }}
       containers:
         - name: mediawiki
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
