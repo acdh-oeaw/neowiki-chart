@@ -1,0 +1,64 @@
+{{- if and .Values.neo4j.enabled (not .Values.externalNeo4j.enabled) }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "neowiki.fullname" . }}-neo4j-read-user
+  labels:
+    app.kubernetes.io/name: {{ include "neowiki.fullname" . }}-neo4j-read-user
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  activeDeadlineSeconds: 1800
+  backoffLimit: 5
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "neowiki.fullname" . }}-neo4j-read-user
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: neo4j-read-user
+          image: {{ include "neowiki.neo4j.image" . | quote }}
+          imagePullPolicy: {{ if .Values.neo4j.image }}{{ .Values.neo4j.image.pullPolicy | default "IfNotPresent" | quote }}{{ else }}"IfNotPresent"{{ end }}
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+
+              ADMIN_PASSWORD="${NEO4J_AUTH#neo4j/}"
+
+              echo "Waiting for Neo4j bolt endpoint..."
+              until echo "RETURN 1;" | cypher-shell -a "bolt://$NEO4J_HOST:$NEO4J_PORT" -u neo4j -p "$ADMIN_PASSWORD" > /dev/null 2>&1; do
+                sleep 2
+              done
+              echo "Neo4j is ready."
+
+              echo "Configuring read-only user $NEO4J_USERNAME_READ..."
+              echo "CREATE USER $NEO4J_USERNAME_READ IF NOT EXISTS SET PASSWORD '$NEO4J_PASSWORD_READ' CHANGE NOT REQUIRED; GRANT ROLE reader TO $NEO4J_USERNAME_READ;" | cypher-shell -a "bolt://$NEO4J_HOST:$NEO4J_PORT" -u neo4j -p "$ADMIN_PASSWORD"
+              echo "Neo4j read-only user configuration complete."
+          env:
+            - name: NEO4J_HOST
+              value: {{ printf "%s-neo4j-lb-neo4j" (include "neowiki.fullname" .) | quote }}
+            - name: NEO4J_PORT
+              value: "7687"
+            - name: NEO4J_AUTH
+              valueFrom:
+                secretKeyRef:
+                  key: NEO4J_AUTH
+                  name: {{ printf "%s-auth" .Values.neo4j.neo4j.name | quote }}
+                  optional: false
+            - name: NEO4J_USERNAME_READ
+              valueFrom:
+                secretKeyRef:
+                  key: NEO4J_USERNAME_READ
+                  name: {{ include "neowiki.neo4j.readAuthSecret.name" . }}
+                  optional: false
+            - name: NEO4J_PASSWORD_READ
+              valueFrom:
+                secretKeyRef:
+                  key: NEO4J_PASSWORD_READ
+                  name: {{ include "neowiki.neo4j.readAuthSecret.name" . }}
+                  optional: false
+{{- end }}

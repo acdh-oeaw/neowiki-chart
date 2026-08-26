@@ -64,6 +64,29 @@
 {{- printf "%s-read-auth" .Values.neo4j.neo4j.name -}}
 {{- end -}}
 
+{{- define "neowiki.neo4j.image" -}}
+{{- $customImage := "" -}}
+{{- $registry := "" -}}
+{{- $repository := "neo4j" -}}
+{{- $tag := "" -}}
+{{- if .Values.neo4j.image -}}
+  {{- $customImage = .Values.neo4j.image.customImage -}}
+  {{- $registry = .Values.neo4j.image.registry | default "" -}}
+  {{- $repository = .Values.neo4j.image.repository | default "neo4j" -}}
+  {{- $tag = .Values.neo4j.image.tag | default "" -}}
+{{- end -}}
+{{- if $customImage -}}
+{{- $customImage -}}
+{{- else -}}
+  {{- if not $tag -}}
+    {{- $edition := .Values.neo4j.neo4j.edition | default "community" -}}
+    {{- $isEnterprise := regexMatch "(?i)enterprise" $edition -}}
+    {{- $tag = printf "2026.07.1%s" (ternary "-enterprise" "" $isEnterprise) -}}
+  {{- end -}}
+  {{- printf "%s%s:%s" (ternary (printf "%s/" $registry) "" (ne $registry "")) $repository $tag -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "neowiki.qlever.url" -}}
 {{ printf "http://%s:%d" (include "neowiki.qlever.name" .) (int .Values.qlever.service.port) }}
 {{- end -}}
