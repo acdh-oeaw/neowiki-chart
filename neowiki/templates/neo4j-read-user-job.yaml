@@ -6,6 +6,10 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ include "neowiki.fullname" . }}-neo4j-read-user
     app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "5"
 spec:
   activeDeadlineSeconds: 1800
   backoffLimit: 5
@@ -36,8 +40,18 @@ spec:
               echo "Neo4j is ready."
 
               echo "Configuring read-only user $NEO4J_USERNAME_READ..."
-              echo "CREATE USER $NEO4J_USERNAME_READ IF NOT EXISTS SET PASSWORD '$NEO4J_PASSWORD_READ' CHANGE NOT REQUIRED; GRANT ROLE reader TO $NEO4J_USERNAME_READ;" | cypher-shell -a "bolt://$NEO4J_HOST:$NEO4J_PORT" -u neo4j -p "$ADMIN_PASSWORD"
-              echo "Neo4j read-only user configuration complete."
+              echo "CREATE USER $NEO4J_USERNAME_READ IF NOT EXISTS SET PASSWORD '$NEO4J_PASSWORD_READ' CHANGE NOT REQUIRED;" | cypher-shell -a "bolt://$NEO4J_HOST:$NEO4J_PORT" -u neo4j -p "$ADMIN_PASSWORD"
+
+              echo "Granting reader role to $NEO4J_USERNAME_READ..."
+              OUTPUT=$(echo "GRANT ROLE reader TO $NEO4J_USERNAME_READ;" | cypher-shell -a "bolt://$NEO4J_HOST:$NEO4J_PORT" -u neo4j -p "$ADMIN_PASSWORD" 2>&1) || {
+                if echo "$OUTPUT" | grep -qi "not supported in this edition"; then
+                  echo "Community edition detected: skipping GRANT ROLE (RBAC is Enterprise-only)."
+                else
+                  echo "$OUTPUT"
+                  exit 1
+                fi
+              }
+              echo "Neo4j read user configuration complete."
           env:
             - name: NEO4J_HOST
               value: {{ printf "%s-neo4j-lb-neo4j" (include "neowiki.fullname" .) | quote }}

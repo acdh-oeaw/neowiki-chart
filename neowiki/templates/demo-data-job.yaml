@@ -6,6 +6,10 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ include "neowiki.fullname" . }}-demo-data
     app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "10"
 spec:
   backoffLimit: 5
   ttlSecondsAfterFinished: 3600
