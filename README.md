@@ -9,4 +9,12 @@ reference, and prerequisites.
 ## License
 
 [MIT](./LICENSE)
-</content>
+
+## AI use
+
+This repository is an AI conversion of the Makefile + docker-compose setup in the upstream repository.
+Tools and LLMs used in August 2026:
+* OpenCode
+* Gemini 3.7 Flash
+* Claude Sonnet 5
+* Qwen3.8 27B
